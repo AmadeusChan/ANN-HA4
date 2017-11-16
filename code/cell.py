@@ -17,6 +17,7 @@ class BasicRNNCell(tf.contrib.rnn.RNNCell):
 
     def __call__(self, inputs, state, scope=None):
         with tf.variable_scope(scope or "basic_rnn_cell", reuse=self._reuse):
+            pass
             #todo: implement the new_state calculation given inputs and state
 
         return new_state, new_state
@@ -39,6 +40,7 @@ class GRUCell(tf.contrib.rnn.RNNCell):
 
     def __call__(self, inputs, state, scope=None):
         with tf.variable_scope(scope or "gru_cell", reuse=self._reuse):
+            pass
             #We start with bias of 1.0 to not reset and not update.
             #todo: implement the new_h calculation given inputs and state
             

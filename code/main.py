@@ -43,16 +43,44 @@ def build_vocab(path, data):
             else:
                 vocab[token] = 1
     vocab_list = _START_VOCAB + sorted(vocab, key=vocab.get, reverse=True)
+
+    '''
+    print len(vocab_list), " ", type(vocab_list)
+    print vocab_list[0], ", ", vocab_list[100]
+    '''
+
     if len(vocab_list) > FLAGS.symbols:
         vocab_list = vocab_list[:FLAGS.symbols]
     else:
         FLAGS.symbols = len(vocab_list)
 
+    word2index = {}
+    for i in range(len(vocab_list)):
+        word2index[vocab_list[i]] = i
+
     print("Loading word vectors...")
     #todo: load word vector from 'vector.txt' to embed, where the value of each line is the word vector of the word in vocab_list
+    '''
     embed = []
-    
     embed = np.array(embed, dtype=np.float32)
+    '''
+    # calculated from vector.txt
+    mean = -0.0055882638895467206
+    std = 0.36930525876815262
+    embed = np.random.randn(len(vocab_list), FLAGS.embed_units) * std + mean
+    # embed = np.zeros(shape = (len(vocab_list), FLAGS.embed_units))
+
+    with open("%s/vector.txt" % (path)) as f:
+        while True:
+            l = f.readline()
+            if l == None or len(l) == 0:
+                break
+            l = l.split(" ")
+            index = word2index[l[0]]
+            lv = len(vocab_list)
+            for i in range(FLAGS.embed_units):
+                embed[index][i] = float(l[i + 1])
+
     return vocab_list, embed
 
 def gen_batch_data(data):
@@ -110,6 +138,13 @@ def inference(model, sess, dataset):
         for label in result:
             f.write('%d\n' % label)
 
+
+data_train = load_data(FLAGS.data_dir, 'train.txt')
+data_dev = load_data(FLAGS.data_dir, 'dev.txt')
+data_test = load_data(FLAGS.data_dir, 'test.txt')
+vocab, embed = build_vocab(FLAGS.data_dir, data_train)
+
+'''
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 with tf.Session(config=config) as sess:
@@ -160,5 +195,4 @@ with tf.Session(config=config) as sess:
 
             loss, accuracy = evaluate(model, sess, data_test)
             print("        test_set, loss %.8f, accuracy [%.8f]" % (loss, accuracy))
-
-
+'''
