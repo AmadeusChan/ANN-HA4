@@ -7,6 +7,10 @@ class BasicRNNCell(tf.contrib.rnn.RNNCell):
         self._activation = activation
         self._reuse = reuse
 
+        self.U = None
+        self.W = None
+        self.b = None
+
     @property
     def state_size(self):
         return self._num_units
@@ -17,8 +21,12 @@ class BasicRNNCell(tf.contrib.rnn.RNNCell):
 
     def __call__(self, inputs, state, scope=None):
         with tf.variable_scope(scope or "basic_rnn_cell", reuse=self._reuse):
-            pass
+            # pass
             #todo: implement the new_state calculation given inputs and state
+            U = tf.get_variable(name = "U", shape =(state.shape[1], self._num_units), dtype = tf.float32, initializer = tf.truncated_normal_initializer(stddev = .1))
+            W = tf.get_variable(name = "W", shape =(inputs.shape[1], self._num_units), dtype = tf.float32, initializer = tf.truncated_normal_initializer(stddev = .1))
+            b = tf.get_variable(name = "b", shape = (self._num_units), dtype = tf.float32, initializer = tf.constant_initializer(.1))
+            new_state = tf.matmul(state, U) + tf.matmul(inputs, W) + b
 
         return new_state, new_state
 
@@ -70,3 +78,11 @@ class BasicLSTMCell(tf.contrib.rnn.RNNCell):
             #todo: implement the new_c, new_h calculation given inputs and state (c, h)
 
             return new_h, (new_c, new_h)
+
+def weight_variable(shape):
+    initial = tf.truncated_normal(shape = shape, stddev = 0.1)
+    return tf.Variable(initial)
+
+def bias_variable(shape):
+    initial = tf.constant(0.1, shape = shape)
+    return tf.Variable(initial)

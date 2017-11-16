@@ -21,9 +21,14 @@ class RNN(object):
             learning_rate=0.5,
             max_gradient_norm=5.0):
         #todo: implement placeholders
+        self.texts = tf.placeholder(dtype = tf.string, shape = [None, None])
+        self.texts_length = tf.placeholder(dtype = tf.int32, shape = [None])
+        self.labels = tf.placeholder(dtype = tf.int64, shape = [None])
+        '''
         self.texts = tf.placeholder()  # shape: batch*len
         self.texts_length = tf.placeholder()  # shape: batch
         self.labels = tf.placeholder()  # shape: batch
+        '''
         
         self.symbol2index = MutableHashTable(
                 key_dtype=tf.string,
@@ -59,6 +64,9 @@ class RNN(object):
         
 
         outputs, states = dynamic_rnn(cell, self.embed_input, self.texts_length, dtype=tf.float32, scope="rnn")
+        self.W = tf.Variable(tf.truncated_normal(stddev = .1, shape = [num_units, num_labels]))
+        self.b = tf.Variable(tf.constant(.1, shape = [num_labels]))
+        logits = tf.matmul(states, self.W) + self.b
 
         #todo: implement unfinished networks
 

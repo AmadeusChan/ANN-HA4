@@ -81,6 +81,7 @@ def build_vocab(path, data):
             for i in range(FLAGS.embed_units):
                 embed[index][i] = float(l[i + 1])
 
+    embed = embed.astype('float32')
     return vocab_list, embed
 
 def gen_batch_data(data):
@@ -120,7 +121,8 @@ def evaluate(model, sess, dataset):
     while ed < len(dataset):
         st, ed = ed, ed+FLAGS.batch_size if ed+FLAGS.batch_size < len(dataset) else len(dataset)
         batch_data = gen_batch_data(dataset[st:ed])
-        outputs = sess.run(['loss:0', 'accuracy:0'], {'texts:0':batch_data['texts'], 'texts_length:0':batch_data['texts_length'], 'labels:0':batch_data['labels']})
+        # outputs = sess.run(['loss:0', 'accuracy:0'], {'texts:0':batch_data['texts'], 'texts_length:0':batch_data['texts_length'], 'labels:0':batch_data['labels']})
+        outputs = sess.run([model.loss, model.accuracy], {model.texts:batch_data['texts'], model.texts_length:batch_data['texts_length'], model.labels:batch_data['labels']})
         loss += outputs[0]
         accuracy += outputs[1]
     return loss / len(dataset), accuracy / len(dataset)
@@ -139,12 +141,13 @@ def inference(model, sess, dataset):
             f.write('%d\n' % label)
 
 
+'''
 data_train = load_data(FLAGS.data_dir, 'train.txt')
 data_dev = load_data(FLAGS.data_dir, 'dev.txt')
 data_test = load_data(FLAGS.data_dir, 'test.txt')
 vocab, embed = build_vocab(FLAGS.data_dir, data_train)
-
 '''
+
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 with tf.Session(config=config) as sess:
@@ -195,4 +198,3 @@ with tf.Session(config=config) as sess:
 
             loss, accuracy = evaluate(model, sess, data_test)
             print("        test_set, loss %.8f, accuracy [%.8f]" % (loss, accuracy))
-'''
