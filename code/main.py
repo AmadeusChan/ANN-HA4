@@ -21,6 +21,7 @@ tf.app.flags.DEFINE_integer("batch_size", 16, "Batch size to use during training
 tf.app.flags.DEFINE_string("data_dir", "./data", "Data directory")
 tf.app.flags.DEFINE_string("train_dir", "./train", "Training directory.")
 tf.app.flags.DEFINE_boolean("log_parameters", True, "Set to True to show the parameters")
+tf.app.flags.DEFINE_float("learning_rate", 1e-3, "Learning Rate")
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -165,11 +166,12 @@ with tf.Session(config=config) as sess:
                 FLAGS.layers,
                 FLAGS.labels,
                 embed,
-                learning_rate=0.001)
+                learning_rate=FLAGS.learning_rate)
         if FLAGS.log_parameters:
             model.print_parameters()
         
-        if tf.train.get_checkpoint_state(FLAGS.train_dir):
+        # if tf.train.get_checkpoint_state(FLAGS.train_dir):
+        if False:
             print("Reading model parameters from %s" % FLAGS.train_dir)
             model.saver.restore(sess, tf.train.latest_checkpoint(FLAGS.train_dir))
         else:

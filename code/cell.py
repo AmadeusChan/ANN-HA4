@@ -23,9 +23,9 @@ class BasicRNNCell(tf.contrib.rnn.RNNCell):
         with tf.variable_scope(scope or "basic_rnn_cell", reuse=self._reuse):
             # pass
             #todo: implement the new_state calculation given inputs and state
-            U = tf.get_variable(name = "U", shape =(state.shape[1], self._num_units), dtype = tf.float32, initializer = tf.truncated_normal_initializer(stddev = .1))
-            W = tf.get_variable(name = "W", shape =(inputs.shape[1], self._num_units), dtype = tf.float32, initializer = tf.truncated_normal_initializer(stddev = .1))
-            b = tf.get_variable(name = "b", shape = (self._num_units), dtype = tf.float32, initializer = tf.constant_initializer(.1))
+            U = tf.get_variable(name = "U", shape =(state.shape[1], self._num_units), dtype = tf.float32)
+            W = tf.get_variable(name = "W", shape =(inputs.shape[1], self._num_units), dtype = tf.float32)
+            b = tf.get_variable(name = "b", shape = (self._num_units), dtype = tf.float32)
             new_state = tf.matmul(state, U) + tf.matmul(inputs, W) + b
 
         return new_state, new_state
