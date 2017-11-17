@@ -13,15 +13,17 @@ tf.app.flags.DEFINE_boolean("is_train", True, "Set to False to inference.")
 tf.app.flags.DEFINE_boolean("read_graph", False, "Set to False to build graph.")
 tf.app.flags.DEFINE_integer("symbols", 18430, "vocabulary size.")
 tf.app.flags.DEFINE_integer("labels", 5, "Number of labels.")
-tf.app.flags.DEFINE_integer("epoch", 1e6, "Number of epoch.")
+tf.app.flags.DEFINE_integer("epoch", 30, "Number of epoch.")
 tf.app.flags.DEFINE_integer("embed_units", 300, "Size of word embedding.")
 tf.app.flags.DEFINE_integer("units", 512, "Size of each model layer.")
 tf.app.flags.DEFINE_integer("layers", 1, "Number of layers in the model.")
-tf.app.flags.DEFINE_integer("batch_size", 35, "Batch size to use during training.")
+tf.app.flags.DEFINE_integer("batch_size", 32, "Batch size to use during training.")
 tf.app.flags.DEFINE_string("data_dir", "./data", "Data directory")
 tf.app.flags.DEFINE_string("train_dir", "./train", "Training directory.")
 tf.app.flags.DEFINE_boolean("log_parameters", True, "Set to True to show the parameters")
-tf.app.flags.DEFINE_float("learning_rate", 1e-3, "Learning Rate")
+tf.app.flags.DEFINE_float("learning_rate",   5e-5,  "Learning Rate")
+tf.app.flags.DEFINE_float("keep_prob",   .5, "dropout keep probability")
+tf.app.flags.DEFINE_float("weight_decay",   3e-5, "L2 loss")
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -66,9 +68,11 @@ def build_vocab(path, data):
     embed = np.array(embed, dtype=np.float32)
     '''
     # calculated from vector.txt
+    '''
     mean = -0.0055882638895467206
     std = 0.36930525876815262
-    embed = np.random.randn(len(vocab_list), FLAGS.embed_units) * std + mean
+    '''
+    embed = np.random.randn(len(vocab_list), FLAGS.embed_units) * 1e-3
     # embed = np.zeros(shape = (len(vocab_list), FLAGS.embed_units))
 
     with open("%s/vector.txt" % (path)) as f:
@@ -166,7 +170,9 @@ with tf.Session(config=config) as sess:
                 FLAGS.layers,
                 FLAGS.labels,
                 embed,
-                learning_rate=FLAGS.learning_rate)
+                learning_rate = FLAGS.learning_rate,
+		keep_prob = FLAGS.keep_prob,
+		weight_decay = FLAGS.weight_decay)
         if FLAGS.log_parameters:
             model.print_parameters()
         

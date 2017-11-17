@@ -19,7 +19,9 @@ class RNN(object):
             num_labels,
             embed,
             learning_rate=0.5,
-            max_gradient_norm=5.0):
+            max_gradient_norm=5.0,
+	    keep_prob=1.,
+	    weight_decay=1e-10):
         #todo: implement placeholders
         self.texts = tf.placeholder(dtype = tf.string, shape = [None, None])
         self.texts_length = tf.placeholder(dtype = tf.int32, shape = [None])
@@ -61,25 +63,39 @@ class RNN(object):
         
         if num_layers == 1:
             cell = BasicRNNCell(num_units)
+	    # cell = tf.contrib.rnn.BasicRNNCell(num_units)
         
 
         outputs, states = dynamic_rnn(cell, self.embed_input, self.texts_length, dtype=tf.float32, scope="rnn")
 
-        self.y0_dp = tf.nn.dropout(states, keep_prob = .5)
-        self.W1 = tf.Variable(tf.truncated_normal(stddev = .1, shape = [num_units, 64]))
-        self.b1 = tf.Variable(tf.constant(.1, shape = [64]))
+	self.y0 = states
+        self.y0_dp = tf.nn.dropout(self.y0, keep_prob = keep_prob)
+
+	self.y1 = tf.layers.dense(inputs = self.y0_dp, units = 128, activation = tf.nn.sigmoid)
+	self.y2 = tf.layers.dense(inputs = self.y1, units = num_labels)
+	logits = self.y2
+
+	'''
+        self.W1 = tf.Variable(tf.truncated_normal(stddev = .1, shape = [num_units, 128]))
+        self.b1 = tf.Variable(tf.constant(.1, shape = [128]))
         self.u1 = tf.matmul(self.y0_dp, self.W1) + self.b1
         self.y1 = tf.nn.sigmoid(self.u1)
 
-        self.W2 = tf.Variable(tf.truncated_normal(stddev = .1, shape = [64, 5]))
+        self.W2 = tf.Variable(tf.truncated_normal(stddev = .1, shape = [128, 5]))
         self.b2 = tf.Variable(tf.constant(.1, shape = [5]))
         self.u2 = tf.matmul(self.y1, self.W2) + self.b2
+	'''
 
-        logits = self.u2
+	# logits = tf.layers.dense(inputs = self.y1, units = 5)
+	# logits = self.u2
 
         #todo: implement unfinished networks
 
-        self.loss = tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.labels, logits=logits), name='loss')
+	with tf.name_scope("l2_loss"):
+		vars   = tf.trainable_variables() 
+		self.lossL2 = tf.add_n([ tf.nn.l2_loss(v) for v in vars ]) * weight_decay
+
+        self.loss = tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.labels, logits=logits), name='loss') + self.lossL2
         mean_loss = self.loss / tf.cast(tf.shape(self.labels)[0], dtype=tf.float32)
         predict_labels = tf.argmax(logits, 1, 'predict_labels')
         self.accuracy = tf.reduce_sum(tf.cast(tf.equal(self.labels, predict_labels), tf.int32), name='accuracy')
@@ -87,10 +103,13 @@ class RNN(object):
         self.params = tf.trainable_variables()
             
         # calculate the gradient of parameters
+	'''
         opt = tf.train.GradientDescentOptimizer(self.learning_rate)
         gradients = tf.gradients(mean_loss, self.params)
         clipped_gradients, self.gradient_norm = tf.clip_by_global_norm(gradients, max_gradient_norm)
         self.update = opt.apply_gradients(zip(clipped_gradients, self.params), global_step=self.global_step)
+	'''
+	self.train_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss, global_step=self.global_step,var_list=self.params)
 
         tf.summary.scalar('loss/step', self.loss)
         for each in tf.trainable_variables():
@@ -109,7 +128,8 @@ class RNN(object):
         input_feed = {self.texts: data['texts'],
                 self.texts_length: data['texts_length'],
                 self.labels: data['labels']}
-        output_feed = [self.loss, self.accuracy, self.gradient_norm, self.update]
+        # output_feed = [self.loss, self.accuracy, self.gradient_norm, self.update]
+        output_feed = [self.loss, self.accuracy, self.train_op]
         if summary:
             output_feed.append(self.merged_summary_op)
         return session.run(output_feed, input_feed)

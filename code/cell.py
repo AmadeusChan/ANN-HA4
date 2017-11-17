@@ -26,7 +26,8 @@ class BasicRNNCell(tf.contrib.rnn.RNNCell):
             U = tf.get_variable(name = "U", shape =(state.shape[1], self._num_units), dtype = tf.float32)
             W = tf.get_variable(name = "W", shape =(inputs.shape[1], self._num_units), dtype = tf.float32)
             b = tf.get_variable(name = "b", shape = (self._num_units), dtype = tf.float32)
-            new_state = tf.matmul(state, U) + tf.matmul(inputs, W) + b
+            new_state = self._activation(tf.matmul(state, U) + tf.matmul(inputs, W) + b)
+	    
 
         return new_state, new_state
 
