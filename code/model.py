@@ -61,13 +61,21 @@ class RNN(object):
         
         if num_layers == 1:
             cell = BasicRNNCell(num_units)
-            # cell = tf.contrib.rnn.BasicRNNCell(num_units)
         
 
         outputs, states = dynamic_rnn(cell, self.embed_input, self.texts_length, dtype=tf.float32, scope="rnn")
-        self.W = tf.Variable(tf.truncated_normal(stddev = .1, shape = [num_units, num_labels]))
-        self.b = tf.Variable(tf.constant(.1, shape = [num_labels]))
-        logits = tf.matmul(states, self.W) + self.b
+
+        self.y0_dp = tf.nn.dropout(states, keep_prob = .5)
+        self.W1 = tf.Variable(tf.truncated_normal(stddev = .1, shape = [num_units, 64]))
+        self.b1 = tf.Variable(tf.constant(.1, shape = [64]))
+        self.u1 = tf.matmul(self.y0_dp, self.W1) + self.b1
+        self.y1 = tf.nn.sigmoid(self.u1)
+
+        self.W2 = tf.Variable(tf.truncated_normal(stddev = .1, shape = [64, 5]))
+        self.b2 = tf.Variable(tf.constant(.1, shape = [5]))
+        self.u2 = tf.matmul(self.y1, self.W2) + self.b2
+
+        logits = self.u2
 
         #todo: implement unfinished networks
 

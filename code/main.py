@@ -182,6 +182,7 @@ with tf.Session(config=config) as sess:
             sess.run(op_in)
 
         summary_writer = tf.summary.FileWriter('%s/log' % FLAGS.train_dir, sess.graph)
+        max_acc = 0.
         while model.epoch.eval() < FLAGS.epoch:
             epoch = model.epoch.eval()
             random.shuffle(data_train)
@@ -199,4 +200,7 @@ with tf.Session(config=config) as sess:
             print("        dev_set, loss %.8f, accuracy [%.8f]" % (loss, accuracy))
 
             loss, accuracy = evaluate(model, sess, data_test)
+            if accuracy > max_acc:
+                max_acc = accuracy
             print("        test_set, loss %.8f, accuracy [%.8f]" % (loss, accuracy))
+            print("        max test_accuracy [%.8f]" % (max_acc))
