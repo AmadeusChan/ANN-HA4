@@ -5,6 +5,7 @@ import sys
 import json
 import time
 import random
+import os
 random.seed(1229)
 
 from model import RNN, _START_VOCAB
@@ -22,8 +23,8 @@ tf.app.flags.DEFINE_string("data_dir", "./data", "Data directory")
 tf.app.flags.DEFINE_string("train_dir", "./train", "Training directory.")
 tf.app.flags.DEFINE_boolean("log_parameters", True, "Set to True to show the parameters")
 tf.app.flags.DEFINE_float("learning_rate",   5e-5,  "Learning Rate")
-tf.app.flags.DEFINE_float("keep_prob",   .5, "dropout keep probability")
-tf.app.flags.DEFINE_float("weight_decay",   3e-5, "L2 loss")
+tf.app.flags.DEFINE_float("keep_prob",   1., "dropout keep probability")
+tf.app.flags.DEFINE_float("weight_decay",   1e-5, "L2 loss")
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -105,7 +106,12 @@ def gen_batch_data(data):
 
     return batched_data
 
-def train(model, sess, dataset):
+iteration = 0
+tot_loss = 0.
+tot_acc = 0.
+
+def train(model, sess, dataset, summary_writer):
+    global iteration, tot_loss, tot_acc
     st, ed, loss, accuracy = 0, 0, .0, .0
     gen_summary = True
     while ed < len(dataset):
@@ -117,6 +123,21 @@ def train(model, sess, dataset):
             gen_summary = False
         loss += outputs[0]
         accuracy += outputs[1]
+
+	iteration += 1
+	tot_loss += outputs[0] / float(FLAGS.batch_size)
+	tot_acc += outputs[1] / float(FLAGS.batch_size)
+
+	freq = 20
+	if iteration % 20 == 0:
+		summary = tf.Summary()
+		summary.value.add(tag='loss/train', simple_value=tot_loss / float(freq))
+		summary.value.add(tag='accuracy/train', simple_value=tot_acc / float(freq))
+		summary_writer.add_summary(summary, iteration)
+		# print iteration, ": ", tot_loss / 30., " ", tot_acc / 30.
+		tot_loss = 0.
+		tot_acc = 0.
+	
     sess.run(model.epoch_add_op)
 
     return loss / len(dataset), accuracy / len(dataset), summary
@@ -153,6 +174,8 @@ data_test = load_data(FLAGS.data_dir, 'test.txt')
 vocab, embed = build_vocab(FLAGS.data_dir, data_train)
 '''
 
+os.system("rm -r %s/log" % FLAGS.train_dir)
+
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 with tf.Session(config=config) as sess:
@@ -163,50 +186,59 @@ with tf.Session(config=config) as sess:
         data_test = load_data(FLAGS.data_dir, 'test.txt')
         vocab, embed = build_vocab(FLAGS.data_dir, data_train)
         
-        model = RNN(
-                FLAGS.symbols, 
-                FLAGS.embed_units,
-                FLAGS.units, 
-                FLAGS.layers,
-                FLAGS.labels,
-                embed,
-                learning_rate = FLAGS.learning_rate,
+	model = RNN(
+		FLAGS.symbols, 
+		FLAGS.embed_units,
+		FLAGS.units, 
+		FLAGS.layers,
+		FLAGS.labels,
+		embed,
+		learning_rate = 0.,
 		keep_prob = FLAGS.keep_prob,
 		weight_decay = FLAGS.weight_decay)
-        if FLAGS.log_parameters:
-            model.print_parameters()
-        
-        # if tf.train.get_checkpoint_state(FLAGS.train_dir):
-        if False:
-            print("Reading model parameters from %s" % FLAGS.train_dir)
-            model.saver.restore(sess, tf.train.latest_checkpoint(FLAGS.train_dir))
-        else:
-            print("Created model with fresh parameters.")
-            tf.global_variables_initializer().run()
-            op_in = model.symbol2index.insert(constant_op.constant(vocab),
-                constant_op.constant(list(range(FLAGS.symbols)), dtype=tf.int64))
-            sess.run(op_in)
+	for lr in [1e-4, 6e-5, 3e-5, 1e-5, 6e-6, 3e-6]:
+		hyparam_str = "learning_rate_" + str(lr)
+		with tf.variable_scope("test_lr"):
+	        	if FLAGS.log_parameters:
+	        	    model.print_parameters()
+	        	
+	        	# if tf.train.get_checkpoint_state(FLAGS.train_dir):
+	        	if False:
+	        	    print("Reading model parameters from %s" % FLAGS.train_dir)
+	        	    model.saver.restore(sess, tf.train.latest_checkpoint(FLAGS.train_dir))
+	        	else:
+	        	    print("Created model with fresh parameters.")
+	        	    tf.global_variables_initializer().run()
+	        	    op_in = model.symbol2index.insert(constant_op.constant(vocab),
+	        	        constant_op.constant(list(range(FLAGS.symbols)), dtype=tf.int64))
+	        	    sess.run(op_in)
 
-        summary_writer = tf.summary.FileWriter('%s/log' % FLAGS.train_dir, sess.graph)
-        max_acc = 0.
-        while model.epoch.eval() < FLAGS.epoch:
-            epoch = model.epoch.eval()
-            random.shuffle(data_train)
-            start_time = time.time()
-            loss, accuracy, summary = train(model, sess, data_train)
-            summary_writer.add_summary(summary, epoch)
-            summary = tf.Summary()
-            summary.value.add(tag='loss/train', simple_value=loss)
-            summary.value.add(tag='accuracy/train', simple_value=accuracy)
-            summary_writer.add_summary(summary, epoch)
-            model.saver.save(sess, '%s/checkpoint' % FLAGS.train_dir, global_step=model.global_step)
-            print("epoch %d learning rate %.4f epoch-time %.4f loss %.8f accuracy [%.8f]" % (epoch, model.learning_rate.eval(), time.time()-start_time, loss, accuracy))
-            #todo: implement the tensorboard code recording the statistics of development and test set
-            loss, accuracy = evaluate(model, sess, data_dev)
-            print("        dev_set, loss %.8f, accuracy [%.8f]" % (loss, accuracy))
-
-            loss, accuracy = evaluate(model, sess, data_test)
-            if accuracy > max_acc:
-                max_acc = accuracy
-            print("        test_set, loss %.8f, accuracy [%.8f]" % (loss, accuracy))
-            print("        max test_accuracy [%.8f]" % (max_acc))
+			sess.run(model.learning_rate.assign(lr))
+			iteration = 0
+			tot_loss = 0.
+			tot_acc = 0.
+	
+	        	summary_writer = tf.summary.FileWriter(('%s/log/' + hyparam_str) % FLAGS.train_dir, sess.graph)
+			#test_writer = tf.summary.FileWriter("%s/log/test" % FLAGS.train_dir)
+	        	max_acc = 0.
+	        	while model.epoch.eval() < FLAGS.epoch:
+	        	    epoch = model.epoch.eval()
+	        	    random.shuffle(data_train)
+	        	    start_time = time.time()
+	        	    loss, accuracy, summary = train(model, sess, data_train, summary_writer)
+	        	    model.saver.save(sess, '%s/checkpoint' % FLAGS.train_dir, global_step=model.global_step)
+	        	    print("epoch %d learning rate %.4f epoch-time %.4f loss %.8f accuracy [%.8f]" % (epoch, model.learning_rate.eval(), time.time()-start_time, loss, accuracy))
+	        	    #todo: implement the tensorboard code recording the statistics of development and test set
+	        	    loss, accuracy = evaluate(model, sess, data_dev)
+	        	    print("        dev_set, loss %.8f, accuracy [%.8f]" % (loss, accuracy))
+	
+	        	    loss, accuracy = evaluate(model, sess, data_test)
+	        	    summary = tf.Summary()
+	        	    summary.value.add(tag='loss/test', simple_value=loss)
+	        	    summary.value.add(tag='accuracy/test', simple_value=accuracy)
+	        	    summary_writer.add_summary(summary, epoch)
+	
+	        	    if accuracy > max_acc:
+	        	        max_acc = accuracy
+	        	    print("        test_set, loss %.8f, accuracy [%.8f]" % (loss, accuracy))
+	        	    print("        max test_accuracy [%.8f]" % (max_acc))
