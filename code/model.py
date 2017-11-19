@@ -42,6 +42,9 @@ class RNN(object):
         # build the vocab table (string to index)
         # initialize the training process
         self.learning_rate = tf.Variable(float(learning_rate), trainable=False, dtype=tf.float32)
+	self.weight_decay = tf.Variable(float(weight_decay), trainable=False, dtype=tf.float32)
+	self.keep_prob = tf.Variable(float(keep_prob), trainable=False, dtype=tf.float32)
+
         self.global_step = tf.Variable(0, trainable=False)
         self.epoch = tf.Variable(0, trainable=False)
         self.epoch_add_op = self.epoch.assign(self.epoch + 1)
@@ -69,7 +72,7 @@ class RNN(object):
         outputs, states = dynamic_rnn(cell, self.embed_input, self.texts_length, dtype=tf.float32, scope="rnn")
 
 	self.y0 = states
-        self.y0_dp = tf.nn.dropout(self.y0, keep_prob = keep_prob)
+        self.y0_dp = tf.nn.dropout(self.y0, keep_prob = self.keep_prob)
 
 	self.y1 = tf.layers.dense(inputs = self.y0_dp, units = 128, activation = tf.nn.sigmoid)
 	self.y2 = tf.layers.dense(inputs = self.y1, units = num_labels)
@@ -93,7 +96,7 @@ class RNN(object):
 
 	with tf.name_scope("l2_loss"):
 		vars   = tf.trainable_variables() 
-		self.lossL2 = tf.add_n([ tf.nn.l2_loss(v) for v in vars ]) * weight_decay
+		self.lossL2 = tf.add_n([ tf.nn.l2_loss(v) for v in vars ]) * self.weight_decay
 
         self.loss = tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.labels, logits=logits), name='loss') + self.lossL2
         mean_loss = self.loss / tf.cast(tf.shape(self.labels)[0], dtype=tf.float32)
