@@ -71,11 +71,17 @@ class RNN(object):
 	        # cell = tf.contrib.rnn.BasicRNNCell(num_units)
             elif RNN_type == "GRU":
                 cell = GRUCell(num_units)
+            elif RNN_type == "LSTM":
+                cell = BasicLSTMCell(num_units)
         
 
         outputs, states = dynamic_rnn(cell, self.embed_input, self.texts_length, dtype=tf.float32, scope="rnn")
 
-	self.y0 = states
+        if RNN_type == "LSTM":
+            self.y0 = states[1]
+        else:
+	    self.y0 = states
+
         self.y0_dp = tf.nn.dropout(self.y0, keep_prob = self.keep_prob)
 
 	self.y1 = tf.layers.dense(inputs = self.y0_dp, units = 128, activation = tf.nn.sigmoid)

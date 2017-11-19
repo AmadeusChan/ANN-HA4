@@ -95,6 +95,30 @@ class BasicLSTMCell(tf.contrib.rnn.RNNCell):
             #For forget_gate, we add forget_bias of 1.0 to not forget in order to reduce the scale of forgetting in the beginning of the training.
             #todo: implement the new_c, new_h calculation given inputs and state (c, h)
 
+            # forget gate
+            # init: bias = 1.
+            W_f = tf.get_variable(name = "W_f", shape = [h.shape[1] + inputs.shape[1], c.shape[1]], dtype = tf.float32)
+            b_f = tf.get_variable(name = "b_f", shape = [c.shape[1]], initializer = tf.constant_initializer(self._forget_bias))
+            f = tf.nn.sigmoid(tf.matmul(tf.concat([h, inputs], axis = 1), W_f) + b_f)
+
+            # input gate
+            W_i = tf.get_variable(name = "W_i", shape = [h.shape[1] + inputs.shape[1], c.shape[1]], dtype = tf.float32)
+            b_i = tf.get_variable(name = "b_i", shape = [c.shape[1]])
+            i = tf.nn.sigmoid(tf.matmul(tf.concat([h, inputs], axis = 1), W_i) + b_i)
+
+            # candidate
+            W_C = tf.get_variable(name = "W_C", shape = [h.shape[1] + inputs.shape[1], c.shape[1]], dtype = tf.float32)
+            b_C = tf.get_variable(name = "b_C", shape = [c.shape[1]])
+            C_hat = self._activation(tf.matmul(tf.concat([h, inputs], axis = 1), W_C) + b_C)
+
+            new_c = f * c + i * C_hat
+
+            # output gate
+            W_o = tf.get_variable(name = "W_o", shape = [h.shape[1] + inputs.shape[1], h.shape[1]], dtype = tf.float32)
+            b_o = tf.get_variable(name = "b_o", shape = [h.shape[1]])
+            o = tf.nn.sigmoid(tf.matmul(tf.concat([h, inputs], axis = 1), W_o) + b_o)
+            new_h = o * self._activation(new_c)
+
             return new_h, (new_c, new_h)
 
 def weight_variable(shape):
