@@ -14,7 +14,7 @@ tf.app.flags.DEFINE_boolean("is_train", True, "Set to False to inference.")
 tf.app.flags.DEFINE_boolean("read_graph", False, "Set to False to build graph.")
 tf.app.flags.DEFINE_integer("symbols", 18430, "vocabulary size.")
 tf.app.flags.DEFINE_integer("labels", 5, "Number of labels.")
-tf.app.flags.DEFINE_integer("epoch", 100, "Number of epoch.")
+tf.app.flags.DEFINE_integer("epoch", 30, "Number of epoch.")
 tf.app.flags.DEFINE_integer("embed_units", 300, "Size of word embedding.")
 tf.app.flags.DEFINE_integer("units", 512, "Size of each model layer.")
 tf.app.flags.DEFINE_integer("layers", 1, "Number of layers in the model.")
@@ -196,11 +196,13 @@ with tf.Session(config=config) as sess:
 		learning_rate = 0.,
 		keep_prob = FLAGS.keep_prob,
 		weight_decay = FLAGS.weight_decay)
-	for lr in [6e-6, 3e-5]:
-		for wd in [3e-5, 1e-5]:
-			for kb in [.7, .5]:
+	for lr in [3e-5]:
+		for wd in [3e-5]:
+			for kb in [.7]:
+				'''
 				if not ((abs(lr - 3e-5) < 1e-10 and abs(wd - 3e-5) < 1e-10 and abs(kb - .5) < 1e-10) or (abs(lr - 6e-6) < 1e-10 and abs(wd - 1e-5) < 1e-10 and abs(kb - .7) < 1e-10)):
 					continue
+				'''
 				hyparam_str = "learning_rate_" + str(lr) + "__weight_decay_" + str(wd) + "___keep_prob_" + str(kb)
 				with tf.variable_scope("test_lr"):
 			        	if FLAGS.log_parameters:
