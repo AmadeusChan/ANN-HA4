@@ -200,7 +200,7 @@ with tf.Session(config=config) as sess:
                 RNN_type = FLAGS.RNN_type)
 	for lr in [3e-5]:
 		for wd in [3e-5]:
-			for kb in [1.]:
+			for kb in [.7]:
                                 '''
 				if not ((abs(lr - 3e-5) < 1e-10 and abs(wd - 3e-5) < 1e-10 and abs(kb - .5) < 1e-10) or (abs(lr - 6e-6) < 1e-10 and abs(wd - 1e-5) < 1e-10 and abs(kb - .7) < 1e-10)):
 					continue

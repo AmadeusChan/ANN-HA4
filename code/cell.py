@@ -55,18 +55,21 @@ class GRUCell(tf.contrib.rnn.RNNCell):
             # reset gate
             W_r = tf.get_variable(name = "W_r", shape = (inputs.shape[1], self._num_units), dtype = tf.float32)
             U_r = tf.get_variable(name = "U_r", shape = [state.shape[1], self._num_units], dtype = tf.float32)
-            r = tf.nn.sigmoid(tf.matmul(inputs, W_r) + tf.matmul(state, U_r))
+            b_r = tf.get_variable(name = "b_r", initializer = tf.ones_initializer, shape = [self._num_units], dtype = tf.float32)
+            r = tf.nn.sigmoid(tf.matmul(inputs, W_r) + tf.matmul(state, U_r) + b_r)
             # update gate
             W_z = tf.get_variable(name = "W_z", shape = [inputs.shape[1], self._num_units], dtype = tf.float32)
             U_z = tf.get_variable(name = "U_z", shape = [state.shape[1], self._num_units], dtype = tf.float32)
-            z = tf.nn.sigmoid(tf.matmul(inputs, W_z) + tf.matmul(state, U_z))
-
+            b_z = tf.get_variable(name = "b_z", initializer = tf.ones_initializer, shape = [self._num_units], dtype = tf.float32)
+            z = tf.nn.sigmoid(tf.matmul(inputs, W_z) + tf.matmul(state, U_z) + b_z)
 
             W = tf.get_variable(name = "W", shape = [inputs.shape[1], self._num_units], dtype = tf.float32)
             U = tf.get_variable(name = "U", shape = [state.shape[1], self._num_units], dtype = tf.float32)
-            h_hat = self._activation(tf.matmul(inputs, W) + tf.matmul(r * state, U))
+            b = tf.get_variable(name = "b", shape = [self._num_units], dtype = tf.float32)
+
+            h_hat = self._activation(tf.matmul(inputs, W) + tf.matmul(r * state, U) + b)
             new_h = z * state + (1. - z) * h_hat
-            
+
         return new_h, new_h
 
 class BasicLSTMCell(tf.contrib.rnn.RNNCell):
