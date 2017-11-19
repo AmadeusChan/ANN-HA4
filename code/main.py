@@ -21,6 +21,7 @@ tf.app.flags.DEFINE_integer("layers", 1, "Number of layers in the model.")
 tf.app.flags.DEFINE_integer("batch_size", 32, "Batch size to use during training.")
 tf.app.flags.DEFINE_string("data_dir", "./data", "Data directory")
 tf.app.flags.DEFINE_string("train_dir", "./train", "Training directory.")
+tf.app.flags.DEFINE_string("RNN_type", "LSTM", "Training directory.")
 tf.app.flags.DEFINE_boolean("log_parameters", True, "Set to True to show the parameters")
 tf.app.flags.DEFINE_float("learning_rate",   5e-5,  "Learning Rate")
 tf.app.flags.DEFINE_float("keep_prob",   1., "dropout keep probability")
@@ -195,14 +196,15 @@ with tf.Session(config=config) as sess:
 		embed,
 		learning_rate = 0.,
 		keep_prob = FLAGS.keep_prob,
-		weight_decay = FLAGS.weight_decay)
+		weight_decay = FLAGS.weight_decay,
+                RNN_type = FLAGS.RNN_type)
 	for lr in [3e-5]:
-		for wd in [3e-5]:
-			for kb in [.7]:
-				'''
+		for wd in [1e-4, 6e-5, 3e-5, 1e-5, 6e-6, 3e-6]:
+			for kb in [.5, .7, 1.]:
+                                '''
 				if not ((abs(lr - 3e-5) < 1e-10 and abs(wd - 3e-5) < 1e-10 and abs(kb - .5) < 1e-10) or (abs(lr - 6e-6) < 1e-10 and abs(wd - 1e-5) < 1e-10 and abs(kb - .7) < 1e-10)):
 					continue
-				'''
+                                '''
 				hyparam_str = "learning_rate_" + str(lr) + "__weight_decay_" + str(wd) + "___keep_prob_" + str(kb)
 				with tf.variable_scope("test_lr"):
 			        	if FLAGS.log_parameters:
@@ -235,10 +237,17 @@ with tf.Session(config=config) as sess:
 			        	    random.shuffle(data_train)
 			        	    start_time = time.time()
 			        	    loss, accuracy, summary = train(model, sess, data_train, summary_writer)
+
 			        	    model.saver.save(sess, '%s/checkpoint' % FLAGS.train_dir, global_step=model.global_step)
 			        	    print("epoch %d learning rate %.4f epoch-time %.4f loss %.8f accuracy [%.8f]" % (epoch, model.learning_rate.eval(), time.time()-start_time, loss, accuracy))
 			        	    #todo: implement the tensorboard code recording the statistics of development and test set
 			        	    loss, accuracy = evaluate(model, sess, data_dev)
+
+			        	    summary = tf.Summary()
+			        	    summary.value.add(tag='loss/dev', simple_value=loss)
+			        	    summary.value.add(tag='accuracy/dev', simple_value=accuracy)
+			        	    summary_writer.add_summary(summary, epoch)
+
 			        	    print("        dev_set, loss %.8f, accuracy [%.8f]" % (loss, accuracy))
 			
 			        	    loss, accuracy = evaluate(model, sess, data_test)

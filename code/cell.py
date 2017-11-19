@@ -49,10 +49,27 @@ class GRUCell(tf.contrib.rnn.RNNCell):
 
     def __call__(self, inputs, state, scope=None):
         with tf.variable_scope(scope or "gru_cell", reuse=self._reuse):
-            pass
+            #pass
             #We start with bias of 1.0 to not reset and not update.
             #todo: implement the new_h calculation given inputs and state
-            
+            # reset gate
+            W_r = tf.get_variable(name = "W_r", shape = (inputs.shape[1], self._num_units), dtype = tf.float32)
+            U_r = tf.get_variable(name = "U_r", shape = [state.shape[1], self._num_units], dtype = tf.float32)
+            b_r = tf.get_variable(name = "b_r", initializer = tf.ones_initializer, shape = [self._num_units], dtype = tf.float32)
+            r = tf.nn.sigmoid(tf.matmul(inputs, W_r) + tf.matmul(state, U_r) + b_r)
+            # update gate
+            W_z = tf.get_variable(name = "W_z", shape = [inputs.shape[1], self._num_units], dtype = tf.float32)
+            U_z = tf.get_variable(name = "U_z", shape = [state.shape[1], self._num_units], dtype = tf.float32)
+            b_z = tf.get_variable(name = "b_z", initializer = tf.ones_initializer, shape = [self._num_units], dtype = tf.float32)
+            z = tf.nn.sigmoid(tf.matmul(inputs, W_z) + tf.matmul(state, U_z) + b_z)
+
+            W = tf.get_variable(name = "W", shape = [inputs.shape[1], self._num_units], dtype = tf.float32)
+            U = tf.get_variable(name = "U", shape = [state.shape[1], self._num_units], dtype = tf.float32)
+            b = tf.get_variable(name = "b", shape = [self._num_units], dtype = tf.float32)
+
+            h_hat = self._activation(tf.matmul(inputs, W) + tf.matmul(r * state, U) + b)
+            new_h = z * state + (1. - z) * h_hat
+
         return new_h, new_h
 
 class BasicLSTMCell(tf.contrib.rnn.RNNCell):
@@ -77,6 +94,30 @@ class BasicLSTMCell(tf.contrib.rnn.RNNCell):
             c, h = state
             #For forget_gate, we add forget_bias of 1.0 to not forget in order to reduce the scale of forgetting in the beginning of the training.
             #todo: implement the new_c, new_h calculation given inputs and state (c, h)
+
+            # forget gate
+            # init: bias = 1.
+            W_f = tf.get_variable(name = "W_f", shape = [h.shape[1] + inputs.shape[1], c.shape[1]], dtype = tf.float32)
+            b_f = tf.get_variable(name = "b_f", shape = [c.shape[1]], initializer = tf.constant_initializer(self._forget_bias))
+            f = tf.nn.sigmoid(tf.matmul(tf.concat([h, inputs], axis = 1), W_f) + b_f)
+
+            # input gate
+            W_i = tf.get_variable(name = "W_i", shape = [h.shape[1] + inputs.shape[1], c.shape[1]], dtype = tf.float32)
+            b_i = tf.get_variable(name = "b_i", shape = [c.shape[1]])
+            i = tf.nn.sigmoid(tf.matmul(tf.concat([h, inputs], axis = 1), W_i) + b_i)
+
+            # candidate
+            W_C = tf.get_variable(name = "W_C", shape = [h.shape[1] + inputs.shape[1], c.shape[1]], dtype = tf.float32)
+            b_C = tf.get_variable(name = "b_C", shape = [c.shape[1]])
+            C_hat = self._activation(tf.matmul(tf.concat([h, inputs], axis = 1), W_C) + b_C)
+
+            new_c = f * c + i * C_hat
+
+            # output gate
+            W_o = tf.get_variable(name = "W_o", shape = [h.shape[1] + inputs.shape[1], h.shape[1]], dtype = tf.float32)
+            b_o = tf.get_variable(name = "b_o", shape = [h.shape[1]])
+            o = tf.nn.sigmoid(tf.matmul(tf.concat([h, inputs], axis = 1), W_o) + b_o)
+            new_h = o * self._activation(new_c)
 
             return new_h, (new_c, new_h)
 
