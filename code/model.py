@@ -72,20 +72,27 @@ class RNN(object):
             elif RNN_type == "GRU":
                 cell = GRUCell(num_units)
             elif RNN_type == "LSTM":
+                #cell = tf.contrib.rnn.BasicLSTMCell(num_units)
                 cell = BasicLSTMCell(num_units)
         
 
-        outputs, states = dynamic_rnn(cell, self.embed_input, self.texts_length, dtype=tf.float32, scope="rnn")
+        outputs, states = dynamic_rnn(cell, tf.nn.dropout(self.embed_input, keep_prob = self.keep_prob), self.texts_length, dtype=tf.float32, scope="rnn")
 
+	'''
         if RNN_type == "LSTM":
             self.y0 = states[1]
         else:
 	    self.y0 = states
+	'''
+
+	self.y0 = tf.reduce_max(outputs, axis = 1)
 
         self.y0_dp = tf.nn.dropout(self.y0, keep_prob = self.keep_prob)
+	'''
 
 	self.y1 = tf.layers.dense(inputs = self.y0_dp, units = 128, activation = tf.nn.sigmoid)
-	self.y2 = tf.layers.dense(inputs = self.y1, units = num_labels)
+	'''
+	self.y2 = tf.layers.dense(inputs = self.y0_dp, units = num_labels)
 	logits = self.y2
 
 	'''
@@ -116,13 +123,11 @@ class RNN(object):
         self.params = tf.trainable_variables()
             
         # calculate the gradient of parameters
-	'''
         opt = tf.train.GradientDescentOptimizer(self.learning_rate)
         gradients = tf.gradients(mean_loss, self.params)
         clipped_gradients, self.gradient_norm = tf.clip_by_global_norm(gradients, max_gradient_norm)
-        self.update = opt.apply_gradients(zip(clipped_gradients, self.params), global_step=self.global_step)
-	'''
-	self.train_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss, global_step=self.global_step,var_list=self.params)
+        self.train_op = opt.apply_gradients(zip(clipped_gradients, self.params), global_step=self.global_step)
+	#self.train_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss, global_step=self.global_step,var_list=self.params)
 
         tf.summary.scalar('loss/step', self.loss)
         for each in tf.trainable_variables():
@@ -142,7 +147,7 @@ class RNN(object):
                 self.texts_length: data['texts_length'],
                 self.labels: data['labels']}
         # output_feed = [self.loss, self.accuracy, self.gradient_norm, self.update]
-        output_feed = [self.loss, self.accuracy, self.train_op]
+        output_feed = [self.loss, self.accuracy, self.train_op, self.gradient_norm]
         if summary:
             output_feed.append(self.merged_summary_op)
         return session.run(output_feed, input_feed)
