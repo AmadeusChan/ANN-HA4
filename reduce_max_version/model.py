@@ -115,9 +115,9 @@ class RNN(object):
 
 	#self.y0 = tf.reduce_max(outputs, axis = 1)
 	#self.y0 = tf.reduce_mean(tf.concat([outputs[0] + outputs[1], self.embed_input], axis = 2), axis = 1)
-	self.y0 = tf.reduce_max(outputs[0] + outputs[1], axis = 1)
+	self.y0 = tf.reduce_max(tf.concat([outputs[0], outputs[1]], axis = 2), axis = 1)
 	#self.y0 = tf.reduce_sum(states, axis = 0)
-	self.y0 = states[0][1] + states[1][1]
+	#self.y0 = states[0][1] + states[1][1]
 	#print "****** y0:", self.y0
         self.y0_dp = tf.nn.dropout(self.y0, keep_prob = 1.)
 

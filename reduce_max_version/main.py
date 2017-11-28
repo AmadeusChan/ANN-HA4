@@ -18,7 +18,7 @@ tf.app.flags.DEFINE_integer("epoch", 500, "Number of epoch.")
 tf.app.flags.DEFINE_integer("embed_units", 300, "Size of word embedding.")
 tf.app.flags.DEFINE_integer("units", 512, "Size of each model layer.")
 tf.app.flags.DEFINE_integer("layers", 1, "Number of layers in the model.")
-tf.app.flags.DEFINE_integer("batch_size", 20, "Batch size to use during training.")
+tf.app.flags.DEFINE_integer("batch_size", 4, "Batch size to use during training.")
 tf.app.flags.DEFINE_string("data_dir", "./data", "Data directory")
 tf.app.flags.DEFINE_string("train_dir", "./train", "Training directory.")
 tf.app.flags.DEFINE_string("RNN_type", "LSTM", "Training directory.")
@@ -198,9 +198,9 @@ with tf.Session(config=config) as sess:
 		keep_prob = FLAGS.keep_prob,
 		weight_decay = FLAGS.weight_decay,
                 RNN_type = FLAGS.RNN_type)
-	for lr in [1e-3]:
-		for wd in [0., 3e-5, 1e-5, 6e-5]:
-			for kb in [1., .7, .5]:
+	for lr in [3e-5]:
+		for wd in [1e-4]:
+			for kb in [.8]:
                                 '''
 				if not ((abs(lr - 3e-5) < 1e-10 and abs(wd - 3e-5) < 1e-10 and abs(kb - .5) < 1e-10) or (abs(lr - 6e-6) < 1e-10 and abs(wd - 1e-5) < 1e-10 and abs(kb - .7) < 1e-10)):
 					continue
